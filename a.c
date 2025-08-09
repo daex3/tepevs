@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
 	};
 
 	if (z.name && saved_file_exists(z.name))
-		load_from_json(&z.te, z.name),
+		load_from_json(&z.te, z.name);
 
 	z.ins = z.te.x.len ?
 		&z.te.x.x[0]
@@ -264,8 +264,12 @@ int main(int argc, char **argv) {
 					&size,
 					input_num(
 						"Shape"
-						"\r\n\r\n"
+						"\r\n\n"
 						"	1	Rectangle"
+						"\r\n\n"
+						"	2	Triangle"
+						"\r\n\n"
+						"	3	Circle"
 						"\r\n\n"
 						"Index: "
 					)

@@ -1,4 +1,4 @@
-CFLAGS	= -o out -Wall -Wextra -Werror -lpng -lcjson -I../include
+CFLAGS	= -o out -Wall -Wextra -Werror -lpng -lcjson -lm -I../include
 MAIN	= a.c
 CC	= gcc
 
