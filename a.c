@@ -59,6 +59,7 @@ void add_c(String *b, char c) {
 	b->x[b->len++] = c;
 }
 
+// TODO: Negative numbers are dead :)
 void itoa(String *b, int n) {
 	if (b->len >= b->max)
 		return;
@@ -108,33 +109,49 @@ int get_pixel_index_at_pos(Pixels *px, D2 *pos, Instance *ins) {
 	pos->x += ins->pos.x,
 	pos->y += ins->pos.y;
 
+	int r = -1;
+
 	for(int i = 0; i < px->len; ++i) {
 		Px *p = &px->x[i];
 
-		if (p->pos.x == pos->x && p->pos.y == pos->y)
-			return i;
+		if (p->pos.x == pos->x && p->pos.y == pos->y) {
+			r = 1;
+
+			break;
+		}
 	}
 
 	pos->x -= ins->pos.x,
 	pos->y -= ins->pos.y;
 
-	return -1;
+	return r;
 }
 
 // Slow
 // TODO: Edge selection O_o
-int get_vertex_index_at_pos(Vertex *v, D2 *pos, int exclude_i) {
+int get_vertex_index_at_pos(Vertex *v, D2 *pos, int exclude_i, Instance *ins) {
+	pos->x += ins->pos.x,
+	pos->y += ins->pos.y;
+
+	int r = -1;
+
 	for(int i = 0; i < v->len; ++i) {
 		if (i == exclude_i)
 			continue;
 
 		Vertice *ve = &v->x[i];
 
-		if (ve->pos.x == pos->x && ve->pos.y == pos->y)
-			return i;
+		if (ve->pos.x == pos->x && ve->pos.y == pos->y) {
+			r = 1;
+
+			break;
+		}
 	}
 
-	return -1;
+	pos->x -= ins->pos.x,
+	pos->y -= ins->pos.y;
+
+	return r;
 }
 
 void new_px(Pixels *px, D2 *cur, D2 *pos, RGBA *color, Instance *ins) {
@@ -215,7 +232,7 @@ int main(int argc, char **argv) {
 	z.status_bar.x = strndup("\x1b[9999H\x1b[2K", z.status_bar.max = z.te.ws.x);
 	*/
 	z.status_bar.x = malloc(z.status_bar.max = z.te.ws.x),
-	strlcat(z.status_bar.x, "\x1b[9999H\x1b[2K", z.te.ws.x);
+	strlcpy(z.status_bar.x, "\x1b[9999H\x1b[2K", 12);
 
 	// TODO: Make more shortcuts for properties vi-like
 	while (read(0, &z.c, 1) != -1) {
@@ -261,7 +278,8 @@ int main(int argc, char **argv) {
 				int ind = get_vertex_index_at_pos(
 					z.ve,
 					&z.cur,
-					z.v_index
+					z.v_index,
+					z.ins
 				);
 
 				if (ind != -1)
@@ -290,7 +308,8 @@ int main(int argc, char **argv) {
 					get_vertex_index_at_pos(
 						z.ve,
 						&z.cur,
-						z.v_index
+						z.v_index,
+						z.ins
 					)
 				: -1;
 
@@ -372,7 +391,8 @@ int main(int argc, char **argv) {
 					int ind = get_vertex_index_at_pos(
 						z.ve,
 						&z.cur,
-						z.v_index
+						z.v_index,
+						z.ins
 					);
 
 					if (ind != -1) {
@@ -486,6 +506,9 @@ int main(int argc, char **argv) {
 						"Delete z.instance index: "
 				);
 
+				if (i < 0)
+					break;
+
 				if (i < z.te.x.len) {
 					if (was_n)
 						z.ins = &z.te.x.x[i],
@@ -527,6 +550,7 @@ int main(int argc, char **argv) {
 
 			// Load
 			// Requires a placeholder to work correctly, for now u can do it manually via `mv ~/.tegrine/saved/abc`
+			// TODO: There's a double free somewhere... where i don't belong :3
 			case 'Z':
 				if (!z.name)
 					input_any(&z, "JSON file to load from: "),
@@ -551,7 +575,8 @@ int main(int argc, char **argv) {
 				int ind = get_vertex_index_at_pos(
 					z.ve,
 					&z.cur,
-					z.v_index
+					z.v_index,
+					z.ins
 				);
 
 				if (ind != -1) {
