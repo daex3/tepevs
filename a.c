@@ -7,15 +7,29 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <setjmp.h>
+#include <errno.h>
 
 #define VERTEX
 #define PIXELS
 #define SHAPES
 
+jmp_buf jmp_b;
+char *g_err;
+
+#define ERR_HANDLE	\
+	g_err = message,\
+	longjmp(jmp_b, 1);
+
 #include <tegrine/instances.c>
 #include <tegrine/term.c>
 #include <tegrine/json.c>
 #include <reader_png.c>
+
+typedef struct {
+	char *x;
+	size_t len, max;
+} String;
 
 void sub(int *x) {
 	*x -= *x ? 1 : 0;
@@ -25,64 +39,92 @@ void add_l(int *x, int max) {
 	*x += *x < max - 1 ? 1 : 0;
 }
 
-_Bool empty_input = 0;
-
-// TODO: Backspace
-int input_num(char *message) {
-	if (empty_input)
-		return 0;
-
-	empty_input = 1,
-	printf("\x1b[9999H\x1b[2K%s", message),
-	fflush(stdout);
-
-	int n = 0;
-
-	char c;
-	while (read(0, &c, 1) != -1 && isdigit(c))
-		n *= 10,
-		n += c - 48,
-		putchar(c),
-		fflush(stdout),
-		empty_input = 0;
-	
-	return n;
+size_t max_size(size_t x, size_t m) {
+	return x > m ? m : x;
 }
 
-char input[1024];
-
-// Define a default value as a parameter, print that as fainted text(placeholder) and while not empty clear it
-void input_any(char *message) {
-	printf("\x1b[9999H\x1b[2K%s", message),
-	fflush(stdout);
-
-	int i = 0;
-	char c;
-
-	while (i < 1024 && read(0, &c, 1) != -1 && c != 13)
-		input[i++] = c,
-		putchar(c),
-		fflush(stdout);
-	
-	input[i] = 0;
+// :)
+void add_s(String *b, char *s) {
+	b->len += strlcpy(
+		b->x + b->len,
+		s,
+		max_size(strlen(s) + 1 + b->len, b->max) - b->len
+	);
 }
+
+void add_c(String *b, char c) {
+	if (b->len >= b->max - 1)
+		return;
+
+	b->x[b->len++] = c;
+}
+
+void itoa(String *b, int n) {
+	if (b->len >= b->max)
+		return;
+
+	/* Alien to humans... well canny to computers :) */
+	if (n < 0)
+		b->x[b->len++] = '-';
+
+	int a = b->len;
+
+	do
+		b->x[b->len++] = n % 10 + 48,
+		n /= 10;
+	while (n && b->len < b->max);
+
+
+	/* Reverse >-<	*/
+	for(int i = b->len; a < --i; ++a) {
+		char c = b->x[a];
+
+		b->x[a] = b->x[i],
+		b->x[i] = c;
+	}
+}
+
+
+// TODO: [N] Key [Motion]
+typedef struct {
+	_Bool px_hold;
+	char	 c,
+		*name;
+	String status_bar;
+	D2	cur,
+		size;
+	Instance *ins;
+	RGBA color;
+	int v_index;
+	Tegrine te;
+	Vertex *ve;
+	Vertice *v;
+} Tepevs;
+
+#include "input.c"
 
 // Slow
-// TODO: Bug doesn't add +instance.pos
-size_t get_pixel_index_at_pos(Pixels *px, D2 *pos) {
-	for(size_t i = 0; i < px->len; ++i) {
+int get_pixel_index_at_pos(Pixels *px, D2 *pos, Instance *ins) {
+	pos->x += ins->pos.x,
+	pos->y += ins->pos.y;
+
+	for(int i = 0; i < px->len; ++i) {
 		Px *p = &px->x[i];
 
 		if (p->pos.x == pos->x && p->pos.y == pos->y)
 			return i;
 	}
 
+	pos->x -= ins->pos.x,
+	pos->y -= ins->pos.y;
+
 	return -1;
 }
 
 // Slow
-size_t get_vertex_index_at_pos(Vertex *v, D2 *pos, size_t exclude_i) {
-	for(size_t i = 0; i < v->len; ++i) {
+// TODO: Edge selection O_o
+int get_vertex_index_at_pos(Vertex *v, D2 *pos, int exclude_i) {
+	for(int i = 0; i < v->len; ++i) {
 		if (i == exclude_i)
 			continue;
 
@@ -95,32 +137,14 @@ size_t get_vertex_index_at_pos(Vertex *v, D2 *pos, size_t exclude_i) {
 	return -1;
 }
 
-_Bool saved_file_exists(char *name) {
-	char	 path[1024] = { },
-		*home = getenv("HOME");
-	
-	if (!home)
-		return 0;
-
-	strlcat(path, home, 1024),
-	strlcat(path, "/.tegrine/saved/", 1024),
-	strlcat(path, name, 1024);
-
-	int fd = open(path, O_RDONLY);
-
-	close(fd);
-
-	return fd != -1;
-}
-
-void new_px(Pixels *px, D2 *cur, D2 *pos, RGBA *color) {
-	size_t i = get_pixel_index_at_pos(px, cur);
+void new_px(Pixels *px, D2 *cur, D2 *pos, RGBA *color, Instance *ins) {
+	int i = get_pixel_index_at_pos(px, cur, ins);
 
 	cur->x -= pos->x,
 	cur->y -= pos->y;
 
 	// Exists
-	if (i != (size_t)-1)
+	if (i != -1)
 		px->x[i] = (Px){ *cur, *color };
 	else
 		add_Px(px, cur, color);
@@ -129,23 +153,23 @@ void new_px(Pixels *px, D2 *cur, D2 *pos, RGBA *color) {
 	cur->y += pos->y;
 }
 
-typedef struct {
-	_Bool px_hold;
-	char	c,
-		*name;
-	D2	cur,
-		size;
-	Instance *ins;
-	RGBA color;
-	size_t v_index;
-	Tegrine te;
-	Vertex *ve;
-	Vertice *v;
-} Tepevs;
+void select_first_instance(Tepevs *z) {
+	z->ins = z->te.x.len ?
+		&z->te.x.x[0]
+	:
+		add_Instance(
+			&z->te.x,
+			&z->cur,
+			&z->size
+		);
+}
 
 /*
 	Every single one of those fixes are math ;-;
 
+	TODO: SIGWINCH
+	TODO: Help message
+	TODO: Flip
 	TODO: Ultimately selection with the z.instance itself as for multiple ones...
 	TODO: Multiple z.vertex neighbors
 	TODO: Temporarily create a new z.instance until pressing Enter to apply
@@ -158,27 +182,40 @@ typedef struct {
 int main(int argc, char **argv) {
 	Tepevs z = {
 		.name		= argc > 1 ? argv[1] : NULL,
-		.v_index	= -1
+		.v_index	= -1,
+		.status_bar	= { }
 	};
 
-	if (z.name && saved_file_exists(z.name))
-		load_from_json(&z.te, z.name);
 
-	z.ins = z.te.x.len ?
-		&z.te.x.x[0]
-	:
-		add_Instance(
-			&z.te.x,
-			&z.cur,
-			&z.size,
-			&z.color
-		);
+	// For loading first :P
+	if (setjmp(jmp_b))
+		fputs("\x1b[9999H\x1b[2K", stderr),
+		perror(g_err),
+		exit(-1);
+
+	term_raw();
+
+	if (z.name)
+		load_from_json(&z.te, z.name);
+	
+	// Then we'll catch those errors reselecting if needed L
+	if (setjmp(jmp_b))
+		printf("\x1b[9999H\x1b[2K%s: %s", g_err, strerror(errno)),
+		read(0, &z.c, 1);
+
+	select_first_instance(&z),
 
 	z.ve = &z.ins->vertex,
 
 	set_ws(&z.te.ws),
-	term_raw(),
 	draw(&z.te, &z.cur);
+
+	z.status_bar.len = 11,
+	/*
+	z.status_bar.x = strndup("\x1b[9999H\x1b[2K", z.status_bar.max = z.te.ws.x);
+	*/
+	z.status_bar.x = malloc(z.status_bar.max = z.te.ws.x),
+	strlcat(z.status_bar.x, "\x1b[9999H\x1b[2K", z.te.ws.x);
 
 	// TODO: Make more shortcuts for properties vi-like
 	while (read(0, &z.c, 1) != -1) {
@@ -202,30 +239,66 @@ int main(int argc, char **argv) {
 				
 				break;
 
+			case 'G':
+				// *Keystrokes* Secure it is :)
+				add_s(&z.status_bar, "2D "),
+				itoa(&z.status_bar, z.cur.x),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, z.cur.y),
+				add_s(&z.status_bar, " RGBA "),
+				itoa(&z.status_bar, (int)z.color.r),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, (int)z.color.g),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, (int)z.color.b),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, (int)z.color.a);
+
+				break;
+
+			// TODO: Mix get_* into a single function -> <T> obviously void *
+			case 'P': {
+				int ind = get_vertex_index_at_pos(
+					z.ve,
+					&z.cur,
+					z.v_index
+				);
+
+				if (ind != -1)
+					z.color = z.ve->x[ind].color;
+				else if ((ind = get_pixel_index_at_pos(
+						&z.ins->pixels,
+						&z.cur,
+						z.ins
+				)) != -1)
+					z.color = z.ins->pixels.x[ind].color;
+			}
+			break;
+
 			// Hold drawing Pixels
 			case 'H':
 				z.px_hold = z.px_hold ? 0 : (z.v = NULL, 1);
 
 				break;
 			case ' ':
-				new_px(&z.ins->pixels, &z.cur, &z.ins->pos, &z.color);
+				new_px(&z.ins->pixels, &z.cur, &z.ins->pos, &z.color, z.ins);
 
 				break;
 			case 'v': {
 				// TODO: Multiple selection is required to expand this part
-				size_t i = !z.v ?
+				int i = !z.v ?
 					get_vertex_index_at_pos(
 						z.ve,
 						&z.cur,
 						z.v_index
 					)
-				: (size_t)-1;
+				: -1;
 
 				/*
 					Selects existing z.vertex
 					Adds z.vertex
 				*/
-				if (i != (size_t)-1)
+				if (i != -1)
 					z.v = &z.ve->x[z.v_index = i];
 				else {
 					z.v_index = z.ve->len,
@@ -239,12 +312,18 @@ int main(int argc, char **argv) {
 						add_Vertice(
 							z.ve,
 							&z.cur,
+							&z.color,
 							z.v_index += 1
 						);
 
-					z.v = add_Vertice(z.ve, &z.cur, -1),
+					z.v = add_Vertice(z.ve, &z.cur, &z.color, -1),
 					z.cur.x += z.ins->pos.x,
-					z.cur.y += z.ins->pos.y;
+					z.cur.y += z.ins->pos.y,
+
+					add_s(&z.status_bar, "Added "),
+					add_c(&z.status_bar, z.v ? '1' : '2'),
+					add_s(&z.status_bar, " vertice; Reconnected "),
+					add_c(&z.status_bar, z.v ? '1' : '0');
 				}
 
 				z.px_hold = 0;
@@ -252,8 +331,8 @@ int main(int argc, char **argv) {
 			break;
 			case 'e': {
 				D2 size = {
-					input_num("Size x: "),
-					input_num("Size y: ")
+					input_num(&z, "Size x: "),
+					input_num(&z, "Size y: ")
 				};
 
 				z.cur.x -= z.ins->pos.x,
@@ -262,7 +341,9 @@ int main(int argc, char **argv) {
 					&z.ins->shapes,
 					&z.cur,
 					&size,
+					&z.color,
 					input_num(
+						&z, 
 						"Shape"
 						"\r\n\n"
 						"	1	Rectangle"
@@ -275,7 +356,12 @@ int main(int argc, char **argv) {
 					)
 				),
 				z.cur.x += z.ins->pos.x,
-				z.cur.y += z.ins->pos.y;
+				z.cur.y += z.ins->pos.y,
+
+				add_s(&z.status_bar, "Added shape sized "),
+				itoa(&z.status_bar, size.x),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, size.y);
 			}
 			break;
 
@@ -283,26 +369,35 @@ int main(int argc, char **argv) {
 			case 13:
 				// Merges the z.vertex for u :3
 				if (z.v) {
-					size_t ind = get_vertex_index_at_pos(
+					int ind = get_vertex_index_at_pos(
 						z.ve,
 						&z.cur,
 						z.v_index
 					);
 
-					if (ind != (size_t)-1) {
+					if (ind != -1) {
 						// Atleast trutly remoz.ve at end
 						if (z.v_index == z.ve->len - 1)
 							--z.ve->len;
 						else
 							z.v->pos.x = -1;
 
+						int recon = 0;
+
 						// Reconnect ez.very z.vertex to the one found
-						for(size_t i = 0; i < z.ve->len; ++i) {
+						for(int i = 0; i < z.ve->len; ++i) {
 							Vertice *p = &z.ve->x[i];
 
 							if (p->neighbor == z.v_index)
-								p->neighbor = ind;
+								p->neighbor = ind,
+								++recon;
 						}
+
+						add_s(&z.status_bar, "Reconnected "),
+						itoa(&z.status_bar, recon),
+						add_s(&z.status_bar, " vertices to "),
+						itoa(&z.status_bar, ind),
+						add_s(&z.status_bar, "; Deselected vertice");
 					}
 
 					z.v = NULL;
@@ -312,30 +407,38 @@ int main(int argc, char **argv) {
 
 			// Change
 			case 'c':
-				z.color.r = input_num("RGBA r: "),
-				z.color.g = input_num("RGBA g: "),
-				z.color.b = input_num("RGBA b: ");
+				z.color.r = input_num(&z, "RGBA r: "),
+				z.color.g = input_num(&z, "RGBA g: "),
+				z.color.b = input_num(&z, "RGBA b: "),
+				z.color.a = input_num(&z, "RGBA a: ");
 
-				break;
-			case 'C':
-				z.ins->color.r = input_num("instance->color r: "),
-				z.ins->color.g = input_num("instance->color g: "),
-				z.ins->color.b = input_num("instance->color b: ");
+				// Defaults for u <3
+				if (!z.color.a)
+					z.color.a = 255;
 
 				break;
 			case 'p':
-				z.ins->pos.x = input_num("Position x: "),
-				z.ins->pos.y = input_num("Position y: ");
+				z.ins->pos.x = input_num(&z, "Position x: "),
+				z.ins->pos.y = input_num(&z, "Position y: ");
 
 				break;
-			// Incredily slowwww: 10 minutes was possible
+			/*
+				Incredily slowwww: 10 minutes was possible
+				Fix: Hash
+				Resizal sucks :)
+			*/
 			case 's': {
 				D2 new = { 
-					input_num("Size x: "),
-					input_num("Size y: "),
+					input_num(&z, "Size x: "),
+					input_num(&z, "Size y: "),
 				};
 
-				resize_instance(z.ins, &new);
+				resize_instance(z.ins, &new),
+
+				add_s(&z.status_bar, "Resized instance within "),
+				itoa(&z.status_bar, z.te.ws.x),
+				add_c(&z.status_bar, ','),
+				itoa(&z.status_bar, z.te.ws.y);
 			}
 			break;
 
@@ -346,23 +449,30 @@ int main(int argc, char **argv) {
 			case 'a':
 			case 'A': {
 				D2 size = {
-					input_num("Size x: "),
-					input_num("Size y: ")
+					input_num(&z, "Size x: "),
+					input_num(&z, "Size y: ")
 				};
 
 				z.ve = &(z.ins = add_Instance(
 					&z.te.x,
 					&z.cur,
-					&size,
-					&z.color
+					&size
 				))->vertex;
 
-				// Has the relative path from the current path
-				if (z.c == 'A')
-					input_any("PNG file to load: "),
+				add_s(
+					&z.status_bar,
+					z.c == 'A' ?
+						input_any(&z, "PNG file to load: "),
 
-					z.ins->pixels = read_png(input),
-					resize_pixels(&z.ins->pixels, &z.te.ws);
+						z.ins->pixels = read_png(input),
+						resize_pixels(&z.ins->pixels, &z.te.ws),
+
+						add_s(&z.status_bar, "Added instance; Loaded PNG file from ./"),
+
+						input
+					:
+						"Added empty instance"
+				);
 			}
 			break;
 
@@ -370,27 +480,32 @@ int main(int argc, char **argv) {
 			case 'N': {
 				_Bool	was_n	= z.c == 'n';
 				int	i	= input_num(
+					&z, 
 					was_n ?	"Select z.instance index: "
 					:
 						"Delete z.instance index: "
 				);
 
-				// Obvious underflow
-				if (i < (int)z.te.x.len) {
+				if (i < z.te.x.len) {
 					if (was_n)
-						z.ins = &z.te.x.x[i];
-					else {
-						remove_instance(&z.te, i);
+						z.ins = &z.te.x.x[i],
 
-						if (!z.te.x.len)
-							z.ins = add_Instance(
+						add_s(&z.status_bar, "Selected instance "),
+						itoa(&z.status_bar, i);
+					else {
+						remove_Instance(&z.te.x, i),
+						add_s(&z.status_bar, "Removed instance "),
+						itoa(&z.status_bar, i),
+						add_s(&z.status_bar, z.te.x.len ? "; Added; Selected" : "; Selected first instance");
+
+						z.ins = z.te.x.len ?
+							z.te.x.x
+						:
+							add_Instance(
 								&z.te.x,
 								&z.cur,
-								&z.size,
-								&z.color
+								&z.size
 							);
-						else
-							z.ins = z.te.x.x;
 					}
 				}
 			}
@@ -399,55 +514,73 @@ int main(int argc, char **argv) {
 			// Save me
 			case 'z':
 				if (!z.name)
-					input_any("JSON file to save as: "),
+					input_any(&z, "JSON file to save as: "),
 					z.name = input;
 
-				// TODO: More formats to save as
-				save_to_json(&z.te, z.name);
+				// TODO: More formats to save as: PNG
+				save_to_json(&z.te, z.name),
+
+				add_s(&z.status_bar, "Saved to JSON file at $HOME/.tegrine/saved/"),
+				add_s(&z.status_bar, z.name);
 
 				break;
 
 			// Load
-			/*
-				Requires a placeholder to work correctly, for now u can do it manually via `mv ~/.tegrine/saved/abc`
-				A status message could be nice as for information: 'Saved as `abc`'
-			*/
+			// Requires a placeholder to work correctly, for now u can do it manually via `mv ~/.tegrine/saved/abc`
 			case 'Z':
 				if (!z.name)
-					input_any("JSON file to load from: "),
+					input_any(&z, "JSON file to load from: "),
 					z.name = input;
 
 				// TODO: More formats to load from
-				load_from_json(&z.te, z.name);
+				load_from_json(&z.te, z.name),
+				select_first_instance(&z),
+
+				add_s(
+					&z.status_bar,
+					"Freed + Selected first instance + Loaded JSON file from $HOME/.tegrine/saved/"
+				),
+
+				add_s(&z.status_bar, z.name);
 
 				break;
 
-			// "Deletes" over the cursor
+			// Deletes over the cursor
+			// TODO: Delete shape
 			case 'd': {
-				size_t ind = get_vertex_index_at_pos(
+				int ind = get_vertex_index_at_pos(
 					z.ve,
 					&z.cur,
 					z.v_index
 				);
 
-				if (ind != (size_t)-1) {
-					Vertice *v = &z.ve->x[ind];
+				if (ind != -1) {
+					remove_Vertice(&z.ins->vertex, ind);
 
-					v->pos.x = DELETED,
-					v->neighbor = -1;
+					int discon = 0;
 
 					// Disconnect all
-					for(size_t i = 0; i < z.ve->len; ++i)
-						if ((v = &z.ve->x[i])->neighbor == ind)
-							v->neighbor = -1;
+					for(int i = 0; i < z.ve->len; ++i) {
+						Vertice *v = &z.ve->x[i];
+
+						if (v->neighbor == ind)
+							v->neighbor = -1,
+							++discon;
+					}
+
+					add_s(&z.status_bar, "Removed vertex + Disconnected "),
+					itoa(&z.status_bar, discon);
 				} else {
 					ind = get_pixel_index_at_pos(
 						&z.ins->pixels,
-						&z.cur
+						&z.cur,
+						z.ins
 					);
 
-					if (ind != (size_t)-1)
-						z.ins->pixels.x[ind].pos.x = DELETED;
+					if (ind != -1)
+						remove_Px(&z.ins->pixels, ind),
+
+						add_s(&z.status_bar, "Removed pixel");
 				}
 
 				z.v		= NULL,
@@ -462,13 +595,20 @@ int main(int argc, char **argv) {
 		}
 
 		if (z.px_hold)
-			new_px(&z.ins->pixels, &z.cur, &z.ins->pos, &z.color);
+			new_px(&z.ins->pixels, &z.cur, &z.ins->pos, &z.color, z.ins);
 		else if (z.v)
 			z.v->pos = z.cur;
 
 		empty_input = 0,
 		draw(&z.te, &z.cur);
+
+		if (z.status_bar.len > 11)
+			fwrite(z.status_bar.x, z.status_bar.len, 1, stdout),
+			printf("\x1b[%d;%dH", 1 + z.cur.y, 1 + z.cur.x),
+			fflush(stdout),
+			z.status_bar.len = 11;
 	}
 
-	free_tegrine(&z.te);
+	free_tegrine(&z.te),
+	free(z.status_bar.x);
 }

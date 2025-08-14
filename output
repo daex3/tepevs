@@ -1,0 +1,199 @@
+==10697== Memcheck, a memory error detector
+==10697== Copyright (C) 2002-2024, and GNU GPL'd, by Julian Seward et al.
+==10697== Using Valgrind-3.25.1 and LibVEX; rerun with -h for copyright info
+==10697== Command: ./out
+==10697== 
+[2J[1;1H==10697== Invalid write of size 1
+==10697==    at 0x485E728: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x400512D: input_any (input.c:7)
+==10697==    by 0x400611B: main (a.c:521)
+==10697==  Address 0x4bff8cc is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x485E7E2: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x400512D: input_any (input.c:7)
+==10697==    by 0x400611B: main (a.c:521)
+==10697==  Address 0x4bff8e3 is 23 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x485DDD4: __strlen_sse2 (vg_replace_strmem.c:508)
+==10697==    by 0x4A4CF99: fputs (iofputs.c:33)
+==10697==    by 0x4005144: input_any (input.c:8)
+==10697==    by 0x400611B: main (a.c:521)
+==10697==  Address 0x4bff8cc is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x486370E: mempcpy (vg_replace_strmem.c:1701)
+==10697==    by 0x4A5AC4F: _IO_new_file_xsputn (fileops.c:1297)
+==10697==    by 0x4A5AC4F: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1258)
+==10697==    by 0x4A4D02A: fputs (iofputs.c:38)
+==10697==    by 0x4005144: input_any (input.c:8)
+==10697==    by 0x400611B: main (a.c:521)
+==10697==  Address 0x4bff8cc is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x4863700: mempcpy (vg_replace_strmem.c:1701)
+==10697==    by 0x4A5AC4F: _IO_new_file_xsputn (fileops.c:1297)
+==10697==    by 0x4A5AC4F: _IO_file_xsputn@@GLIBC_2.2.5 (fileops.c:1258)
+==10697==    by 0x4A4D02A: fputs (iofputs.c:38)
+==10697==    by 0x4005144: input_any (input.c:8)
+==10697==    by 0x400611B: main (a.c:521)
+==10697==  Address 0x4bff8cd is 1 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+[9999H[2KJSON file to load from: qqkljkqqqkjf[9999H[2K[31mError:[m fopen: No such file or directory[2J[1;1H[2J[1;1H==10697== Invalid write of size 1
+==10697==    at 0x485E728: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x400512D: input_any (input.c:7)
+==10697==    by 0x400528E: input_num (input.c:40)
+==10697==    by 0x4005DCB: main (a.c:421)
+==10697==  Address 0x4bffbec is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x485E7E2: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x400512D: input_any (input.c:7)
+==10697==    by 0x400528E: input_num (input.c:40)
+==10697==    by 0x4005DCB: main (a.c:421)
+==10697==  Address 0x4bffbf3 is 7 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x485DDD4: __strlen_sse2 (vg_replace_strmem.c:508)
+==10697==    by 0x4A4CF99: fputs (iofputs.c:33)
+==10697==    by 0x4005144: input_any (input.c:8)
+==10697==    by 0x400528E: input_num (input.c:40)
+==10697==    by 0x4005DCB: main (a.c:421)
+==10697==  Address 0x4bffbec is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+[9999H[2KSize x: jfd[9999H[2KSize y: qqkfsad==10697== Invalid write of size 1
+==10697==    at 0x485E728: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x4005E0B: main (a.c:427)
+==10697==  Address 0x4bffbec is 0 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x485E7E2: strlcpy (vg_replace_strmem.c:668)
+==10697==    by 0x4004F67: add_s (a.c:44)
+==10697==    by 0x4005E0B: main (a.c:427)
+==10697==  Address 0x4bffc03 is 23 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x4005059: itoa (a.c:66)
+==10697==    by 0x4005E1B: main (a.c:428)
+==10697==  Address 0x4bffc03 is 23 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x40050B8: itoa (a.c:73)
+==10697==    by 0x4005E1B: main (a.c:428)
+==10697==  Address 0x4bffc03 is 23 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid read of size 1
+==10697==    at 0x40050C9: itoa (a.c:75)
+==10697==    by 0x4005E1B: main (a.c:428)
+==10697==  Address 0x4bffc05 is 21 bytes after a block of size 16 in arena "client"
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x40050D7: itoa (a.c:75)
+==10697==    by 0x4005E1B: main (a.c:428)
+==10697==  Address 0x4bffc03 is 23 bytes after a block of size 12 alloc'd
+==10697==    at 0x48547A8: malloc (vg_replace_malloc.c:446)
+==10697==    by 0x4A7B0C5: strndup (strndup.c:43)
+==10697==    by 0x40056F1: main (a.c:207)
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x40050E8: itoa (a.c:76)
+==10697==    by 0x4005E1B: main (a.c:428)
+==10697==  Address 0x4bffc05 is 21 bytes after a block of size 16 in arena "client"
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x4004FD6: add_c (a.c:52)
+==10697==    by 0x4005E2D: main (a.c:429)
+==10697==  Address 0x4bffc06 is 22 bytes after a block of size 16 in arena "client"
+==10697== 
+==10697== Invalid write of size 1
+==10697==    at 0x4005059: itoa (a.c:66)
+==10697==    by 0x4005E3D: main (a.c:430)
+==10697==  Address 0x4bffc07 is 23 bytes after a block of size 16 in arena "client"
+==10697== 
+
+valgrind: m_mallocfree.c:304 (get_bszB_as_is): Assertion 'bszB_lo == bszB_hi' failed.
+valgrind: Heap block lo/hi size mismatch: lo = 80, hi = 53.
+This is probably caused by your program erroneously writing past the
+end of a heap block and corrupting heap metadata.  If you fix any
+invalid writes reported by Memcheck, this assertion failure will
+probably go away.  Please try that before reporting this as a bug.
+
+
+host stacktrace:
+==10697==    at 0x5804C48F: show_sched_status_wrk.lto_priv.0 (m_libcassert.c:426)
+==10697==    by 0x5804C4CF: report_and_quit (m_libcassert.c:497)
+==10697==    by 0x5804C64A: vgPlain_assert_fail (m_libcassert.c:563)
+==10697==    by 0x58046F4A: UnknownInlinedFun (m_mallocfree.c:304)
+==10697==    by 0x58046F4A: UnknownInlinedFun (m_mallocfree.c:1607)
+==10697==    by 0x58046F4A: vgPlain_describe_addr (m_addrinfo.c:185)
+==10697==    by 0x580474CE: vgMemCheck_update_Error_extra (mc_errors.c:1444)
+==10697==    by 0x58052EED: vgPlain_maybe_record_error (m_errormgr.c:870)
+==10697==    by 0x58041BD5: vgMemCheck_record_address_error (mc_errors.c:917)
+==10697==    by 0x5800303C: mc_LOADVn_slow.lto_priv.0 (mc_main.c:1562)
+==10697==    by 0x1002EBEF94: ???
+==10697==    by 0x1002DA5E7F: ???
+
+sched status:
+  running_tid=1
+
+Thread 1: status = VgTs_Runnable (lwpid 10697)
+==10697==    at 0x40050B8: itoa (a.c:73)
+==10697==    by 0x4005E3D: main (a.c:430)
+client stack range: [0x1FFEFFE000 0x1FFF000FFF] client SP: 0x1FFF000620
+valgrind stack range: [0x1002CA6000 0x1002DA5FFF] top usage: 12048 of 1048576
+
+
+Note: see also the FAQ in the source distribution.
+It contains workarounds to several common problems.
+In particular, if Valgrind aborted or crashed after
+identifying problems in your program, there's a good chance
+that fixing those problems will prevent Valgrind aborting or
+crashing, especially if it happened in m_mallocfree.c.
+
+If that doesn't help, please report this bug to: www.valgrind.org
+
+In the bug report, send all the above text, the valgrind
+version, and what OS and version you are using.  Thanks.
+

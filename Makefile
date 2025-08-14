@@ -1,6 +1,6 @@
 CFLAGS	= -o out -Wall -Wextra -Werror -lpng -lcjson -lm -I../include
 MAIN	= a.c
-CC	= gcc
+CC	= clang
 
 all: rel r
 
@@ -18,7 +18,7 @@ mac:
 	$(CC) -dM -E $(MAIN)
 sca:
 	scan-build -v -V make rel
-	clang-tidy $(MAIN) -- -I.
+	clang-tidy $(MAIN) -- -I. -I../include
 
 r:
 	./out
