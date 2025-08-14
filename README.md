@@ -7,7 +7,7 @@ sudo ln -s $(PWD)/../tegrine /usr/include/tegrine
 make
 ./out abc
 ```
-\#\# Libs
+## Libs
 - CJSON
 - Libpng
 - Tegrine
